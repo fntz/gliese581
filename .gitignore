@@ -1,0 +1,16 @@
+project/project
+project/target
+target
+output*
+*.class
+*.log
+.history
+.cache/
+.history/
+.lib/
+target/
+.idea/
+.idea_modules/
+.cache
+logs/
+macro/target
