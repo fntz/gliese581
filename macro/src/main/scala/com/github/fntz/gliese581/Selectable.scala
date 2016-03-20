@@ -1,4 +1,4 @@
-package com.github.gliese581
+package com.github.fntz.gliese581
 
 import java.util.{HashMap => HM}
 

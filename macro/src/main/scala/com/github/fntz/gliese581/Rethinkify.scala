@@ -1,8 +1,7 @@
-package com.github.gliese581
+package com.github.fntz.gliese581
 
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
 import scala.language.experimental.macros
-import scala.reflect.internal.Trees
 import scala.reflect.macros.blackbox.Context
 
 
@@ -62,13 +61,13 @@ object rethinkifyImpl {
 
                       case x =>
                         q"""$hm.put($k, "1000")"""
-                      //q"""$hm.put($k, implicitly[com.github.gliese581.Rethinkify[$m[..$xs]]].toHM)"""
+                      //q"""$hm.put($k, implicitly[com.github.fntz.gliese581.Rethinkify[$m[..$xs]]].toHM)"""
                     }
 
                 }
               } else {
                 // Map ?
-                q"""$hm.put($k, implicitly[com.github.gliese581.Rethinkify[$tpe[..$typeParams]]].toHM($cc))"""
+                q"""$hm.put($k, implicitly[com.github.fntz.gliese581.Rethinkify[$tpe[..$typeParams]]].toHM($cc))"""
               }
 
             case x =>
@@ -100,4 +99,8 @@ object rethinkifyImpl {
 
     c.Expr[Any](q"..$newKlass")
   }
+}
+
+trait Rethinkify[T] {
+  def toHM(value: T): java.util.HashMap[String, Any]
 }

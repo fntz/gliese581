@@ -1,4 +1,4 @@
-package com.github.gliese581
+package com.github.fntz.gliese581
 
 import com.rethinkdb.gen.ast.Table
 

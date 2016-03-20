@@ -1,10 +1,8 @@
-package com.github.gliese581
-import java.util
+package com.github.fntz.gliese581
 
-trait Rethinkify[T] {
-  def toHM(value: T): java.util.HashMap[String, Any]
-}
-
+/**
+  * Created by mike on 21.3.16.
+  */
 object TypeImplicits {
 
 

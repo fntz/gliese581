@@ -8,7 +8,7 @@ import com.rethinkdb.gen.exc.{ReqlError, ReqlQueryLogicError}
 import com.rethinkdb.model.MapObject
 import com.rethinkdb.net.{Connection, Cursor}
 
-import com.github.gliese581._
+import com.github.fntz.gliese581._
 
 object Boot extends App {
 
@@ -33,6 +33,10 @@ object Boot extends App {
                     hm: Map[String, Int],
                     zxd: Id
                    )
+  @rethinkify
+  case class Foo(id: Option[String], name: String, age: Int)
+  val f = Foo(None, "Gliese581", 1000000000)
+  println(f.toHM)
 
   val p = Person(Some("123"), "foo", 123, Vector(1,2,3), Map("a" -> 1), Id(1))
   println(p.toHM)
