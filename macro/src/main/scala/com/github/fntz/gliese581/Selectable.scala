@@ -20,7 +20,21 @@ trait Selectable[T] { self: TypeSafeTable[T] =>
     macro SelectableImpl.filter[T, X]
 }
 
-object SelectableImpl {
+class SelectableImpl(val c: Context) {
+
+  import c.universe._
+
+  object traverser extends Traverser {
+    var applies = List[Apply]()
+
+    override def traverse(tree: Tree): Unit = tree match {
+      case app @ Apply(fun, args) =>
+        applies = app :: applies
+        super.traverse(fun)
+        super.traverseTrees(args)
+      case _ => super.traverse(tree)
+    }
+  }
 
   def scala2rethinkMap = Map(
     "$eq$eq" -> "eq",
@@ -29,18 +43,24 @@ object SelectableImpl {
     "$less" -> "lt",
     "$greater$eq" -> "ge",
     "$less$eq" -> "le",
-    "$bar$bar" -> "||",
-    "$amp$amp" -> "&&"
+    "$bar$bar" -> "or",
+    "$amp$amp" -> "and"
   )
 
-
+  def toR(x: TermName) = {
+    TermName(scala2rethinkMap(s"${x.encodedName}"))
+  }
+  def toR(x: Name) = {
+    TermName(scala2rethinkMap(s"${x.encodedName}"))
+  }
   // TODO nested fields
   // TODO pass optArgs
   // TODO if support
   // I need transform scala ast to ReqlFunction1
-  def filter[C: c.WeakTypeTag, X: c.WeakTypeTag](c: Context)
+  def filter[C: c.WeakTypeTag, X: c.WeakTypeTag]
              (f: c.Expr[C => Boolean]): c.Expr[Cursor[X]] = {
     import c.universe._
+
     val pkg = q"com.rethinkdb"
     val tpe = c.weakTypeOf[C]
     val self = c.prefix.tree
@@ -61,33 +81,62 @@ object SelectableImpl {
         val t: Tree = expr
         val arg = TermName(c.freshName("arg"))
 
-        val r = t.children.collect {
-          case q"$expr.$tname" =>
-            //arg1.g("name").eq("qwe")
-            val field = expr match {
-              case q"$k.$m" =>
-                q"""$arg.g(${m.toString})"""
-              case _ =>
-                c.abort(expr.pos, s"Cannot parse $expr")
-                q""
-            }
-            val rOp = TermName(scala2rethinkMap(s"${tname.encodedName}"))
-            q"$field.$rOp"
+        traverser.traverse(t)
+        val last = if (traverser.applies.size == 1) { 1 } else { traverser.applies.size - 1}
 
-          case q"$lit" =>
-            q"$lit"
 
+        def toF(x: Tree) = x match {
+          case q"$o.$m(..$t)" =>
+            m.toString()
+          case q"$o.$m" =>
+            m.toString
           case x =>
-            c.abort(c.enclosingPosition, s"Cannot parse expression $expr")
-            q""
-        }.reduce { (a, b) =>
-          // check if literal and ()
-          q"$a($b)"
+            c.abort(x.pos, s"Cannot parse $x in $expr")
+            ""
         }
+
+        def parse1(t: Tree): Option[Tree] = t match {
+          case Apply(Select(Select(obj, field), op), args) =>
+            Some(q"$arg.g(${field.toString}).${toR(op)}(..$args)")
+
+          case Apply(Select(ltrl, op), List(Select(idnt, field))) =>
+            Some(q"$arg.g(${field.toString}).${toR(op)}($ltrl)")
+
+          case _ => None
+//          case Apply(_, List(Apply(Select(_, op3), _))) =>
+//            q"${toR(op3)}"
+
+        }
+
+//        println(parse1(t))
+
+
+        def parse(t: Tree): Tree = t match {
+          case Apply(Select(Select(obj, field), op), args) =>
+            q"$arg.g(${field.toString}).${toR(op)}(..$args)"
+
+          case Apply(Select(ltrl, op), List(Select(idnt, field))) =>
+            q"$arg.g(${field.toString}).${toR(op)}($ltrl)"
+
+          case Apply(Select(Apply(Select(Select(obj, field), op1), args), op2), List(Apply(Select(Select(obj1, field2), op3), List(args1)))) =>
+            q"$arg.g(${field.toString}).${toR(op1)}(..$args).${toR(op2)}($arg.g(${field2.toString}).${toR(op3)}(..$args1))"
+
+          
+          case x =>
+            println("----")
+            println(showRaw(x))
+            x.children.map(parse).reduce((a, b) => q"$a($b)")
+        }
+
+        println(t.children.map(x => parse(x)))
+
+        val rrr = parse(t)
+        println(rrr)
+
 
         q"""
           new $pkg.gen.ast.ReqlFunction1 {
-            override def apply($arg: $pkg.gen.ast.ReqlExpr): AnyRef = $r
+            override def apply($arg: $pkg.gen.ast.ReqlExpr): AnyRef = $rrr
           }
         """
 
