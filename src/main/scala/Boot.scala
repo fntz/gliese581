@@ -35,10 +35,29 @@ object Boot extends App {
   implicit val r = RethinkDB.r
   implicit val c = r.connection().hostname("localhost").port(28015).connect()
 
-  val xs = r.t[Person]("persons").filter { p =>
-    p.age == 10 || p.age == 70 || p.age == 30   //(p.age == 10 && p.name == "zikurat")
-  }.toList
+  val table = "persons"
+
+  val f = new ReqlFunction1 {
+    override def apply(arg1: ReqlExpr): AnyRef = arg1.g("age").eq(10).or(arg1.g("age").eq(30))
+  }
+
+  val xs = r.t[Person](table).filter { p =>
+    (p.age == 10 or p.age == 30) or p.name == "name-4" //(p.age == 10 && p.name == "zikurat")
+  }
 
 
+  println(xs.toList)
+
+
+//  val xs1: Cursor[_] = r.table(table).filter(f).run(c)
+//  println("---")
+//  println(xs1.toList.size)
 
 }
+
+//  r.db("test").tableCreate("persons").run(c)
+//  (0 to 10).foreach { i =>
+//    val p = Person(None, s"name-$i", age = 10 * i)
+//    r.table("persons").insert(p.toHM).run(c)
+//    Unit
+//  }
