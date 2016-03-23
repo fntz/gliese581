@@ -9,7 +9,7 @@ object TypeImplicits {
 
   implicit class BooleanExt(left: Boolean) {
     def or(other: Boolean): ReqlFunction1 = macro ExtImpl.orImpl
-//    def and(other: Boolean): ReqlFunction1 = macro BooleanImpl.andImpl
+    //    def and(other: Boolean): ReqlFunction1 = macro BooleanImpl.andImpl
   }
 
   implicit class ReqlFunction1Ext(r: ReqlFunction1) {
@@ -22,40 +22,59 @@ object TypeImplicits {
 class ExtImpl(val c: Context) extends MacroShare  {
   import c.universe._
 
-  def reqlOr(other: c.Expr[Boolean]): c.Expr[ReqlFunction1] = {
-    val arg = TermName(c.freshName())
-
-    /*
-    DefDef(Modifiers(OVERRIDE), TermName("apply"), List(), List(List(ValDef(Modifiers(PARAM), TermName("fresh$macro$2"), TypeTree().setOriginal(Select(Select(Select(Select(Ident(com), com.rethinkdb), com.rethinkdb.gen), com.rethinkdb.gen.ast), com.rethinkdb.gen.ast.ReqlExpr)), EmptyTree))), TypeTree().setOriginal(Select(Ident(scala), TypeName("AnyRef"))), Apply(Select(Apply(Select(Apply(Select(Ident(TermName("fresh$macro$2")), TermName("g")), List(Literal(Constant("age")))), TermName("eq")), List(Literal(Constant(10)))), TermName("or")), List(Apply(Select(Apply(Select(Ident(TermName("fresh$macro$2")), TermName("g")), List(Literal(Constant("age")))), TermName("eq")), List(Literal(Constant(30)))))))
-
-     */
-
-    def parse(x: Tree): Tree = {
-      x match {
-        case DefDef(_, _, _, _, _, _) =>
-          println("$"*100)
-          q""
-        case _ =>
-          val xs = x.children.map(parse(_))
-          if (xs.isEmpty)
-            x
-          else
-            xs.reduce((a, b) => q"")
-      }
+  object traverser extends Traverser {
+    var defs = List[(TermName, Tree)]()
+    override def traverse(tree: Tree): Unit = tree match {
+      case DefDef(_, methodName, _, List(List(ValDef(_, pname, _, _))), _, rhs) if methodName == TermName("apply") =>
+        defs = (pname, rhs) :: defs
+      case _ => super.traverse(tree)
     }
-    val x = parse(c.prefix.tree)
-    println("#"*100)
-    println(x)
+  }
+
+  def parseBool(arg: TermName, tree: Tree) = {
+    tree match {
+      case q"$expr.$tname(..$exprs)" =>
+        val field = expr match {
+          case q"$obj.$field" =>
+            q"$field"
+
+          case _ =>
+            c.abort(expr.pos, s"Cannot to parse $expr")
+            q""
+        }
+        q"$arg.g(${field.toString}).${toR(tname)}(..$exprs)"
+
+      case _ =>
+        c.abort(c.enclosingPosition, s"Cannot to parse $tree")
+        q""
+    }
+  }
 
 
+  def reqlOr(other: c.Expr[Boolean]): c.Expr[ReqlFunction1] = {
+    val fresh = TermName(c.freshName())
+    traverser.traverse(c.prefix.tree)
+    if (traverser.defs.isEmpty) {
+      c.abort(c.enclosingPosition, s"Cannot to parse ${c.prefix.tree}")
+    }
 
+    val (arg, left) = traverser.defs.head
+    val right = parseBool(arg, other.tree)
 
+    val tree = c.untypecheck(q"$left.or($right)")
+
+    println(fresh)
+    println(tree.toString().replaceAll(arg.toString, fresh.toString))
 
     val result = q"""
        new ReqlFunction1 {
          override def apply($arg: $pkg.gen.ast.ReqlExpr): AnyRef = $arg.g("age").eq(10)
        }
       """
+    println(result)
+
+
+
 
     c.Expr[ReqlFunction1](result)
   }
@@ -106,4 +125,3 @@ class ExtImpl(val c: Context) extends MacroShare  {
     c.Expr[ReqlFunction1](result)
   }
 }
-

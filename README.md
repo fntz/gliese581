@@ -36,6 +36,16 @@ pritnln(xs.toList)
 
 ```
 
+Convert from rethink to scala object via shapeless:
+
+```scala
+import com.github.fntz.gliese581.RethinkTransformer
+val xs = //some filter operation
+xs.map(RethinkTransformer.to[Person].from) // => collection of Person
+
+```
+
+
 
 
 

@@ -10,6 +10,7 @@ class rethinkify extends StaticAnnotation {
   def macroTransform(annottees: Any*) = macro rethinkifyImpl.rethinkify
 }
 
+
 object rethinkifyImpl {
   def rethinkify(c: Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
