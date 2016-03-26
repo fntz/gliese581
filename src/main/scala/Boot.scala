@@ -3,7 +3,7 @@
 import java.util
 
 import com.rethinkdb.RethinkDB
-import com.rethinkdb.gen.ast.{ReqlExpr, ReqlFunction1, Table}
+import com.rethinkdb.gen.ast.{ReqlExpr, ReqlFunction1, Table, TableCreate}
 import com.rethinkdb.gen.exc.{ReqlError, ReqlQueryLogicError}
 import com.rethinkdb.model.MapObject
 import com.rethinkdb.net.{Connection, Cursor}
@@ -39,7 +39,7 @@ object Boot extends App {
 
   implicit val r = RethinkDB.r
   implicit val c = r.connection().hostname("localhost").port(28015).connect()
-
+  println(r.createTableIfNotExists("persons"))
 //  val m = new util.HashMap[String, Any]()
 //  m.put("id", "123")
 //  m.put("name", "name-1")
