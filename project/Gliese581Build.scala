@@ -4,7 +4,7 @@ import sbt.Keys._
 import sbt.Package.ManifestAttributes
 import sbt._
 
-object Truerssbuild extends Build {
+object Gliese581Build extends Build {
   import Libs._
 
   val setting = Seq(
@@ -37,7 +37,7 @@ object Truerssbuild extends Build {
   )
 
   lazy val mainProject = Project(
-    id = "logarithm",
+    id = "gliese581",
     base = file("."),
     settings = setting ++ Seq(
       parallelExecution in Test := false,

@@ -25,7 +25,8 @@ class ExtImpl(val c: Context) extends MacroShare  {
   object traverser extends Traverser {
     var defs = List[(TermName, Tree)]()
     override def traverse(tree: Tree): Unit = tree match {
-      case DefDef(_, methodName, _, List(List(ValDef(_, pname, _, _))), _, rhs) if methodName == TermName("apply") =>
+      case DefDef(_, methodName, _, List(List(ValDef(_, pname, _, _))), _, rhs)
+        if methodName == TermName("apply") =>
         defs = (pname, rhs) :: defs
       case _ => super.traverse(tree)
     }
@@ -58,23 +59,29 @@ class ExtImpl(val c: Context) extends MacroShare  {
       c.abort(c.enclosingPosition, s"Cannot to parse ${c.prefix.tree}")
     }
 
+
     val (arg, left) = traverser.defs.head
-    val right = parseBool(arg, other.tree)
+    val right = parseBool(fresh, other.tree)
 
-    val tree = c.untypecheck(q"$left.or($right)")
+    val transformer = new Transformer {
+      override def transform(tree: Tree) = {
+        val newTree = tree match {
+          case Ident(i) if i == arg =>
+            Ident(fresh)
+          case x => x
+        }
+        super.transform(newTree)
+      }
+    }
 
-    println(fresh)
-    println(tree.toString().replaceAll(arg.toString, fresh.toString))
+    val tree = c.untypecheck(q"${transformer.transform(left)}.or($right)")
 
     val result = q"""
        new ReqlFunction1 {
-         override def apply($arg: $pkg.gen.ast.ReqlExpr): AnyRef = $arg.g("age").eq(10)
+         override def apply($fresh: $pkg.gen.ast.ReqlExpr): AnyRef =
+           $tree
        }
       """
-    println(result)
-
-
-
 
     c.Expr[ReqlFunction1](result)
   }
