@@ -2,6 +2,7 @@ package com.github.fntz.gliese581
 
 import java.util.{HashMap => HM}
 
+import com.rethinkdb.RethinkDB
 import com.rethinkdb.gen.ast.{ReqlExpr, ReqlFunction1}
 import com.rethinkdb.net.{Connection, Cursor}
 
@@ -17,13 +18,9 @@ trait Selectable[T] { self: TypeSafeTable[T] =>
   def get(key: String)(implicit c: Connection): U = t.get(key).run(c)
   def getOne(key: String)(implicit c: Connection) = get(key)
 
-  // TODO how to avoid this
   def filter[X](f: T => ReqlFunction1)(implicit c: Connection): Cursor[X] = {
     t.filter(f.apply(null.asInstanceOf[T])).run(c)
   }
-
-//  def filter[X](f: T => Boolean): Cursor[X] =
-//    macro SelectableImpl.filter[T, X]
 }
 
 class SelectableImpl(val c: Context) extends MacroShare {

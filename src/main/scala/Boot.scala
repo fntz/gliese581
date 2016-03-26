@@ -60,7 +60,8 @@ object Boot extends App {
   }
 
   val xs = r.t[Person](table).filter { p =>
-    (p.age == 10 or p.age == 30) or p.name == "name-4" or p.name == "name-5" //(p.age == 10 && p.name == "zikurat")
+    p.name == "name-3" and p.age == 30 and p.age == 10
+    //(p.age == 10 or p.age == 30) or p.name == "name-4" or p.name == "name-5" //(p.age == 10 && p.name == "zikurat")
   }
   println(xs.toList)
 
