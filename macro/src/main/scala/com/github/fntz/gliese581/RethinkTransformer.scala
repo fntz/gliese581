@@ -1,9 +1,8 @@
 package com.github.fntz.gliese581
 
-import java.lang.{Long => L}
 import java.util.{HashMap => HM}
 
-import shapeless.Typeable.ValueTypeable
+import shapeless.ops.record.{Keys, ToMap, Values}
 
 import scala.collection.JavaConversions._
 
@@ -14,15 +13,61 @@ import scala.collection.JavaConversions._
 import shapeless._
 import labelled.{FieldType, field}
 
+trait Rethinkify {
+  val id: Option[String]
+}
+// source http://stackoverflow.com/a/31638390/1581531
+object Rethinkify {
+  val defaultUUID = "id"
+  import scala.collection.JavaConversions._
+  import scala.collection.JavaConverters._
+  implicit class ToMapRecOps[A](val a: A) extends AnyVal {
+    def toMap[L <: HList](implicit
+     gen: LabelledGeneric.Aux[A, L],
+     tmr: ToMapRec[L]
+    ): java.util.HashMap[String, Any] = {
+      val h = new HM[String, Any]()
+      tmr(gen.to(a)).foreach { case _ @ (k, v) =>
+        v match {
+          case None =>
+          case _ => h.put(k, v)
+        }
+      }
+      h
+    }
+  }
+}
+
+trait ToMapRec[L <: HList] { def apply(l: L): Map[String, Any] }
+
+trait LowPriorityToMapRec {
+  implicit def hconsToMapRec1[K <: Symbol, V, T <: HList](
+     implicit wit: Witness.Aux[K], tmrT: ToMapRec[T]):
+  ToMapRec[FieldType[K, V] :: T] = new ToMapRec[FieldType[K, V] :: T] {
+    def apply(l: FieldType[K, V] :: T): Map[String, Any] =
+      tmrT(l.tail) + (wit.value.name -> l.head)
+  }
+}
+
+object ToMapRec extends LowPriorityToMapRec {
+  implicit val hnilToMapRec: ToMapRec[HNil] = new ToMapRec[HNil] {
+    def apply(l: HNil): Map[String, Any] = Map.empty
+  }
+
+  implicit def hconsToMapRec0[K <: Symbol, V, R <: HList, T <: HList](
+     implicit wit: Witness.Aux[K], gen: LabelledGeneric.Aux[V, R],
+    tmrH: ToMapRec[R], tmrT: ToMapRec[T]): ToMapRec[FieldType[K, V] :: T] = new ToMapRec[FieldType[K, V] :: T] {
+    def apply(l: FieldType[K, V] :: T): Map[String, Any] =
+      tmrT(l.tail) + (wit.value.name -> tmrH(gen.to(l.head)))
+  }
+}
+
+
 trait FromMap[T <: HList] {
   def apply(hm: Map[String, Any]): Option[T]
 }
 
 trait LowPriorityFromMap {
-  implicit val jllongTypeable: Typeable[L] =
-    ValueTypeable[L, L](classOf[L], "Long")
-
-
   implicit def hconsFromMap[K <: Symbol, V, T <: HList](
     implicit witness: Witness.Aux[K],
     typeable: Typeable[V],
@@ -31,16 +76,11 @@ trait LowPriorityFromMap {
     def apply(m: Map[String, Any]): Option[FieldType[K, V]::T] = {
       val n = witness.value.name
       val x = m.get(n)
-      val v = if (n == "id") {
+      val v = if (n == Rethinkify.defaultUUID) {
         Option(x)
       } else {
         x
       }
-      if (n == "age") {
-        println("@"*100)
-        println(typeable.cast(10))
-      }
-
 
       for {
         r <- v
@@ -76,12 +116,12 @@ object FromMap extends LowPriorityFromMap {
   }
 }
 
-class ConvertHelper[A] {
+class RethinkTransformer[A] {
   def from[R <: HList](m: HM[String, Any])(
     implicit gen: LabelledGeneric.Aux[A, R],
       fromMap: FromMap[R]): Option[A] = fromMap(m.toMap).map(gen.from)
 }
 
 object RethinkTransformer {
-  def to[T]: ConvertHelper[T] = new ConvertHelper[T]
+  def to[T]: RethinkTransformer[T] = new RethinkTransformer[T]
 }

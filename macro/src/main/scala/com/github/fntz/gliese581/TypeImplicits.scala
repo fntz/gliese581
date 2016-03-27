@@ -19,7 +19,6 @@ object TypeImplicits {
     def and(other: Boolean): ReqlFunction1 = macro ExtImpl.reqlAnd
   }
 
-
 }
 
 class ExtImpl(val c: Context) extends MacroShare  {

@@ -17,53 +17,51 @@ object Boot extends App {
   import TypeImplicits._
   def g = uuid.randomUUID().toString
 
-  implicit val map2Rethink = new Rethinkify[Map[String, Int]] {
-    override def toHM(value: Map[String, Int]): util.HashMap[String, Any] = {
-      val hm = new util.HashMap[String, Any]()
-      value.foreach { case _ @ (k, v) =>
-        hm.put(k, v)
-      }
-      hm
-    }
-  }
 
-
-
-
-
-  @rethinkify
+  //@rethinkify
   case class Person(id: Option[String],
-                    name: String, age: Int)
+                    name: String, age: Long) extends Rethinkify
 
   import scala.collection.JavaConversions._
 
   implicit val r = RethinkDB.r
   implicit val c = r.connection().hostname("localhost").port(28015).connect()
-  println(r.createTableIfNotExists("persons"))
-//  val m = new util.HashMap[String, Any]()
-//  m.put("id", "123")
-//  m.put("name", "name-1")
-//  m.put("age", 10)
-//  m.toMap
-//  val transformer = RethinkTransformer.to[Person].from(m)
-//  println(transformer)
 
+  import shapeless._
+  import labelled.FieldType
+  import record._
+
+  //trait ToMapRec[L <: HList] { def apply(l: L): Map[String, Any] }
+
+//LabelledGeneric.Aux[Boot.Person, lgen.Repr]
+  val p = Person(None, "das", 100)
+
+  val g1 = LabelledGeneric[Person]
+
+  import Rethinkify._
+  println(p.toMap)
+
+
+  val transformer = RethinkTransformer.to[Person].from(p.toMap)
+  println(transformer)
   val table = "persons"
 
-  val f = new ReqlFunction1 {
-    override def apply(arg1: ReqlExpr): AnyRef =
-      arg1.g("age").eq(10).or(arg1.g("age").eq(30))
-  }
-  val f1 = new ReqlFunction1 {
-    override def apply(arg1: ReqlExpr): AnyRef =
-      arg1.g("age").eq(10)//.or(arg1.g("age").eq(30))
-  }
+//  val xs = r.t[Person](table).filter { p =>
+//    p.age > 30
+//    //(p.age == 10 or p.age == 30) or p.name == "name-4" or p.name == "name-5" //(p.age == 10 && p.name == "zikurat")
+//  }.toList
 
-  val xs = r.t[Person](table).filter { p =>
-    p.name == "name-3" and p.age == 30 and p.age == 10
-    //(p.age == 10 or p.age == 30) or p.name == "name-4" or p.name == "name-5" //(p.age == 10 && p.name == "zikurat")
-  }
-  println(xs.toList)
+//  println(xs)
+//
+//  xs.asInstanceOf[java.util.ArrayList[util.HashMap[String, Any]]]
+//    .foreach { x =>
+//      //println(x)
+//      println(transformer.from(x))
+//    }
+
+
+
+
 
 
 //  val xs1: Cursor[_] = r.table(table).filter(f).run(c)
