@@ -2,24 +2,61 @@ package com.github.fntz.gliese581
 
 import java.util.{HashMap => HM}
 
-import com.rethinkdb.RethinkDB
 import com.rethinkdb.gen.ast.{ReqlExpr, ReqlFunction1}
 import com.rethinkdb.net.{Connection, Cursor}
+import shapeless.{HList, LabelledGeneric}
 
 import scala.language.experimental.macros
-import scala.reflect.macros.blackbox.Context
 
-trait Selectable[T] { self: TypeSafeTable[T] =>
-  // TODO return models instead of HashMap
-  type U = HM[String, AnyRef]
+class TReqlStream[T <: ReqlExpr](val x: T) {
+  import scala.collection.JavaConversions.asScalaIterator
+  type Out
+  final type U = HM[String, Any]
+  def run[R <: HList](c: Connection)
+                     (implicit lgen: LabelledGeneric.Aux[Out, R],
+                      fromMap: FromMap[R]
+                     ): Stream[Option[Out]] = {
+    val r: Cursor[U] = x.run(c)
+
+    (for {
+      q <- r
+    } yield {
+      RethinkTransformer.to[Out].from(q)
+    }).toStream
+  }
+}
+
+class TReqlOnce[T <: ReqlExpr](val x: T) {
+  type Out
+  final type U = HM[String, Any]
+  def run[R <: HList](c: Connection)
+                              (implicit lgen: LabelledGeneric.Aux[Out, R],
+                               fromMap: FromMap[R]
+                              ): Option[Out] = {
+    RethinkTransformer.to[Out].from(x.run(c))
+  }
+}
+
+trait Selectable[T <: Rethinkify] { self: TypeSafeTable[T] =>
   private val t = self.underlying
-  def all(implicit c: Connection): Cursor[_] = t.run(c)
+  def all = {
+    new TReqlStream(t) {
+      type Out = T
+    }
+  }
 
-  def get(key: String)(implicit c: Connection): U = t.get(key).run(c)
-  def getOne(key: String)(implicit c: Connection) = get(key)
+  def get(key: String) = {
+    new TReqlOnce(t.get(key)) {
+      type Out = T
+    }
+  }
 
-  def filter[X](f: T => ReqlFunction1)(implicit c: Connection): Cursor[X] = {
-    t.filter(f.apply(null.asInstanceOf[T])).run(c)
+  def getOne(key: String) = get(key)
+
+  def filter(f: T => ReqlFunction1) = {
+    new TReqlStream(t.filter(f.apply(null.asInstanceOf[T]))) {
+      type Out = T
+    }
   }
 
   def between = ???

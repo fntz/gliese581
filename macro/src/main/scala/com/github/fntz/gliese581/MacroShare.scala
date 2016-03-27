@@ -8,6 +8,7 @@ trait MacroShare {
   import c.universe._
 
   val pkg = q"com.rethinkdb"
+  val ast = q"$pkg.gen.ast"
 
   def scala2rethinkMap = Map(
     "$eq$eq" -> "eq",

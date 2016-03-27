@@ -2,8 +2,6 @@ package com.github.fntz.gliese581
 
 import java.util.{HashMap => HM}
 
-import shapeless.ops.record.{Keys, ToMap, Values}
-
 import scala.collection.JavaConversions._
 
 /*
@@ -11,7 +9,7 @@ import scala.collection.JavaConversions._
 */
 
 import shapeless._
-import labelled.{FieldType, field}
+import shapeless.labelled.{FieldType, field}
 
 trait Rethinkify {
   val id: Option[String]
@@ -19,8 +17,6 @@ trait Rethinkify {
 // source http://stackoverflow.com/a/31638390/1581531
 object Rethinkify {
   val defaultUUID = "id"
-  import scala.collection.JavaConversions._
-  import scala.collection.JavaConverters._
   implicit class ToMapRecOps[A](val a: A) extends AnyVal {
     def toMap[L <: HList](implicit
      gen: LabelledGeneric.Aux[A, L],

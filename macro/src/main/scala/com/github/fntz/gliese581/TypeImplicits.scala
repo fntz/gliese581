@@ -1,6 +1,5 @@
 package com.github.fntz.gliese581
 
-import com.rethinkdb.net.{Connection, Cursor}
 import com.rethinkdb.gen.ast.ReqlFunction1
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox.Context
@@ -11,7 +10,7 @@ object TypeImplicits {
 
   implicit class BooleanExt(left: Boolean) {
     def or(other: Boolean): ReqlFunction1 = macro ExtImpl.orImpl
-        def and(other: Boolean): ReqlFunction1 = macro ExtImpl.andImpl
+    def and(other: Boolean): ReqlFunction1 = macro ExtImpl.andImpl
   }
 
   implicit class ReqlFunction1Ext(r: ReqlFunction1) {
@@ -26,8 +25,8 @@ class ExtImpl(val c: Context) extends MacroShare  {
 
   private def reql(arg: TermName, body: Tree): Tree = {
     q"""
-      new ReqlFunction1 {
-        override def apply($arg: $pkg.gen.ast.ReqlExpr): AnyRef =
+      new $ast.ReqlFunction1 {
+        override def apply($arg: $ast.ReqlExpr): AnyRef =
            $body
         }
     """

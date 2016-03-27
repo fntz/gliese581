@@ -3,7 +3,7 @@
 import java.util
 
 import com.rethinkdb.RethinkDB
-import com.rethinkdb.gen.ast.{ReqlExpr, ReqlFunction1, Table, TableCreate}
+import com.rethinkdb.gen.ast.{ReqlExpr, Table, TableCreate}
 import com.rethinkdb.gen.exc.{ReqlError, ReqlQueryLogicError}
 import com.rethinkdb.model.MapObject
 import com.rethinkdb.net.{Connection, Cursor}
@@ -22,29 +22,26 @@ object Boot extends App {
   case class Person(id: Option[String],
                     name: String, age: Long) extends Rethinkify
 
-  import scala.collection.JavaConversions._
-
   implicit val r = RethinkDB.r
   implicit val c = r.connection().hostname("localhost").port(28015).connect()
 
-  import shapeless._
-  import labelled.FieldType
-  import record._
-
-  //trait ToMapRec[L <: HList] { def apply(l: L): Map[String, Any] }
-
-//LabelledGeneric.Aux[Boot.Person, lgen.Repr]
-  val p = Person(None, "das", 100)
-
-  val g1 = LabelledGeneric[Person]
-
+  val name = uuid.randomUUID().toString
+  val p = Person(None, name, 100)
   import Rethinkify._
-  println(p.toMap)
+  val x = p.toMap
 
 
   val transformer = RethinkTransformer.to[Person].from(p.toMap)
-  println(transformer)
   val table = "persons"
+
+  val tt = r.t[Person] _
+
+
+  val xs = tt(table).filter(p => p.age > 1 and p.name == "some-name").run(c)
+//  println(xs.toList.flatten)
+//  println(tt(table).get("de6db8d0-35eb-4f8a-9fa4-8c4c064d47cf").run(c))
+
+  println(tt(table).all.run(c).toList)
 
 //  val xs = r.t[Person](table).filter { p =>
 //    p.age > 30

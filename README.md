@@ -3,8 +3,9 @@
 
 ## Features:
 
-### Automatic conversion via `@rethinkify` annotation (add `toHM` method in case class)
-
+### typesafe
+### dsl for selecting and aggregation
+### based on java driver
 
 ```scala
 import com.github.fntz.gliese581.rethinkify
@@ -16,34 +17,44 @@ gliese.toHM // => {name=Gliese581, age=1000000000}
 
 ```
 
-### TypeSafe operations:
+### Convert from rethink to scala object via shapeless:
+
+```scala
+import com.github.fntz.gliese581.RethinkTransformer
+val p = Person(None, "name", 20)
+val toHashMap = p.toMap // => hash map
+val hashMap = // some hash map
+val person = RethinkTransformer.to[Person].from(hashMap)
+```
+
+### Selecting data
 
 ```scala
 
 import com.github.fntz.gliese581.Implicits._
+import com.github.fntz.gliese581.TypeImplicits._
 
-@rethinkify case class Star(id: Option[String], name: String, age: Int)
+case class Star(id: Option[String], name: String, age: Int) extends Rethinkify
 
 implicit val r = RethinkDB.r
 implicit val c = r.connection().hostname("localhost").port(28015).connect()
 
-// works fine
-val xs = r.t[Star]("tv").filter { star =>
-  star.name == "Gliese581"
-}
-pritnln(xs.toList)
+// return all in collection
 
+val xsAll = r.t[Person].all.run(c) // => Stream[Option[Person]]
 
-```
+// one document
 
-Convert from rethink to scala object via shapeless:
+val one = r.t[Person].get("some-uuid") // => Option[Person]
 
-```scala
-import com.github.fntz.gliese581.RethinkTransformer
-val xs = //some filter operation
-xs.map(RethinkTransformer.to[Person].from) // => collection of Person
+// by filter
+
+val f1 = r.t[Person].filter(p => p.age > 10).run(c) // => Stream[Option[Person]]
+val f2 = r.t[Person].fitler(p => p.name == "some-name" and p.age > 10).run(c) // => Stream[Option[Person]]
 
 ```
+
+
 
 
 
