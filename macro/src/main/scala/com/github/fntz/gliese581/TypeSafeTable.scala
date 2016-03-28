@@ -4,4 +4,4 @@ import com.rethinkdb.gen.ast.Table
 
 
 case class TypeSafeTable[T <: Rethinkify](underlying: Table)
-  extends Selectable[T] with Writable[T]
+  extends Filterable[T] with Writable[T]

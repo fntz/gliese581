@@ -1,7 +1,7 @@
 
 
 import java.util
-
+import scala.language.existentials
 import com.rethinkdb.RethinkDB
 import com.rethinkdb.gen.ast.{ReqlExpr, Table, TableCreate}
 import com.rethinkdb.gen.exc.{ReqlError, ReqlQueryLogicError}
@@ -18,7 +18,6 @@ object Boot extends App {
   def g = uuid.randomUUID().toString
 
 
-  //@rethinkify
   case class Person(id: Option[String],
                     name: String, age: Long) extends Rethinkify
 
@@ -30,18 +29,31 @@ object Boot extends App {
   import Rethinkify._
   val x = p.toMap
 
-
+  import shapeless._
   val transformer = RethinkTransformer.to[Person].from(p.toMap)
   val table = "persons"
 
+  import scala.collection.JavaConversions._
+
+
   val tt = r.t[Person] _
+  type U = util.HashMap[String, Any]
+  import java.util.{ArrayList => AL}
+  import com.rethinkdb.model.{GroupedResult => GR}
+//  val gs: AL[GR[Long, U]] = r.table(table).group("name").run(c)
+//  gs.foreach { case x => println(x.group) }
 
+//  val g1 = new TReqlGroup(r.table(table).group("name")) { type Out = Person } .run(c)
+//  println(g1)
 
-  val xs = tt(table).filter(p => p.age > 1 and p.name == "some-name").run(c)
-//  println(xs.toList.flatten)
-//  println(tt(table).get("de6db8d0-35eb-4f8a-9fa4-8c4c064d47cf").run(c))
+  val zs = tt(table).groupBy(_.age).run(c)
+  println(zs.map(_._1.getClass))
 
-  println(tt(table).all.run(c).toList)
+//  val xs = tt(table)
+//    .filter(p => p.age > 1)
+//    .run(c)
+//
+//  println(xs.toList)
 
 //  val xs = r.t[Person](table).filter { p =>
 //    p.age > 30
@@ -70,9 +82,8 @@ object Boot extends App {
 
 }
 
-//  r.db("test").tableCreate("persons").run(c)
-//  (0 to 10).foreach { i =>
-//    val p = Person(None, s"name-$i", age = 10 * i)
-//    r.table("persons").insert(p.toHM).run(c)
-//    Unit
-//  }
+//r.db("test").tableCreate("persons").run(c)
+//(0 to 10).foreach { i =>
+//  val p = Person(None, s"name-$i", age = 10 * i)
+//  r.t[Person]("persons").insert(p).run(c)
+//}

@@ -28,4 +28,15 @@ trait MacroShare {
     TermName(scala2rethinkMap(s"${x.encodedName}"))
   }
 
+  def getField(expr: Tree): Tree = {
+    expr match {
+      case q"$obj.$field" =>
+        q"$field"
+
+      case _ =>
+        c.abort(expr.pos, s"Cannot to parse $expr")
+        q""
+    }
+  }
+
 }

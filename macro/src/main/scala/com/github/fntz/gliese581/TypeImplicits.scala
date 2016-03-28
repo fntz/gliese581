@@ -102,17 +102,6 @@ class ExtImpl(val c: Context) extends MacroShare  {
   }
 
 
-  private def getField(expr: Tree): Tree = {
-    expr match {
-      case q"$obj.$field" =>
-        q"$field"
-
-      case _ =>
-        c.abort(expr.pos, s"Cannot to parse $expr")
-        q""
-    }
-  }
-
   private def conctruct(arg: TermName, expr: Tree): Tree = {
     expr match {
       case q"$expr.$tname(..$exprs)" =>
