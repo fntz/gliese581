@@ -6,14 +6,21 @@ import com.rethinkdb.net.Connection
 import com.github.fntz.gliese581.util.HashMapImplicits
 import java.util.{UUID, HashMap => HM}
 
-class TypeSafeRethink(underlying: Table) {
+class TypeSafeRethink[T](underlying: Table) {
 
   import scala.collection.JavaConversions._
   import HashMapImplicits._
   import InsertResult.{Fields => F}
 
-  def insert[T : Write](x: T)(implicit c: Connection): InsertResult = {
-    val w = implicitly[Write[T]]
+
+  def filter(x: T => Boolean)(implicit c: Connection) = {
+
+  }
+
+  def isEmpty()(implicit c: Connection): Boolean = underlying.isEmpty.run(c)
+
+  def insert[W : Write](x: W)(implicit c: Connection): InsertResult = {
+    val w = implicitly[Write[W]]
     val result: HM[String, Any] = underlying.insert(w.write(x)).run(c)
 
     def getLong(key: String) = {

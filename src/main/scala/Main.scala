@@ -31,6 +31,10 @@ object Main extends App {
 
     val persons = r.t[Person]("persons")
 
+    val t = persons.filter(p => p.age > 10)
+
+    println(t)
+
 //    val t = persons.insert(p)
 
     val z: Cursor[_] = r.table("persons").run(c)

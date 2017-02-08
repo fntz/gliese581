@@ -7,7 +7,7 @@ import com.rethinkdb.net.Connection
 object RethinkImplicits {
 
   implicit class RExtensions(r: RethinkDB) {
-    def t[T](tableName: String) = new TypeSafeRethink(r.table(tableName))
+    def t[T](tableName: String) = new TypeSafeRethink[T](r.table(tableName))
   }
 
 }
