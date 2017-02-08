@@ -1,16 +1,10 @@
 package com.github.fntz.gliese581.format
 
-import scala.meta._
-import scala.annotation.StaticAnnotation
+//import scala.meta._
+//import scala.annotation.StaticAnnotation
 
+import java.util.{HashMap => HM}
 
-class Write extends StaticAnnotation {
-
-  inline def apply(defn: Any): Any = meta {
-
-    println(defn)
-
-    q"$defn"
-  }
-
+trait Write[T] {
+  def write(x: T): HM[String, Any]
 }
